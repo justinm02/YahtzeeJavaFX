@@ -1,4 +1,4 @@
-package Gameplay;
+package JavaFX;
 
 import javafx.scene.control.CheckBox;
 import javafx.scene.image.Image;

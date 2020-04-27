@@ -1,9 +1,11 @@
-package Gameplay;
+package JavaFX;
 
+import Gameplay.YahtzeeGame;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -11,6 +13,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
@@ -21,73 +24,69 @@ import java.io.FileNotFoundException;
 public class DiceRollingSection {
 
     private Stage primaryStage;
-    private GridPane diceGrid;
     private YahtzeeGame yahtzeeGame;
     private Dice[] dice;
 
     private Text rollsRemaining;
+    private Button rollButton = new Button();
 
-    public DiceRollingSection(Stage primaryStage) {
+    public DiceRollingSection(Stage primaryStage, GridPane mainGrid, YahtzeeGame yahtzeeGame) {
         this.primaryStage = primaryStage;
-        diceGrid = createGrid();
-        yahtzeeGame = new YahtzeeGame();
+        this.yahtzeeGame = yahtzeeGame;
         dice = new Dice[5];
+
+        rollButton = new Button();
         rollsRemaining = new Text();
 
         try {
-            initDiceUI();
+            initDiceUI(mainGrid);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-
-        Scene scene = new Scene(diceGrid);
-
-        primaryStage.setScene(scene);
     }
 
-    private GridPane createGrid() {
-        GridPane grid = new GridPane();
-        grid.setMinSize(400, 200);
-        grid.setAlignment(Pos.TOP_LEFT);
-        grid.setHgap(40);
-        grid.setVgap(20);
-        grid.setPadding(new Insets(10));
-        return grid;
-    }
-
-    private void initDiceUI() throws FileNotFoundException {
+    private void initDiceUI(GridPane mainGrid) throws FileNotFoundException {
         yahtzeeGame.useRoll();
-        for (int row = 1; row <= 5; row++) {
-            addDiceText(row);
 
-            int diceRoll = yahtzeeGame.rollDice(row-1);
+        //addWelcomeText(mainGrid);
+        for (int row = 2; row <= 6; row++) {
+            addDiceText(row, mainGrid);
+
+            int diceRoll = yahtzeeGame.rollDice(row-2);
 
             Dice rolledDice = new Dice();
-            dice[row-1] = rolledDice;
+            dice[row-2] = rolledDice;
 
-            addDiceDescription(rolledDice, diceRoll, row);
-            addDiceImage(rolledDice, diceRoll, row);
-            addRerollCheckBox(rolledDice, row);
+            addDiceDescription(rolledDice, diceRoll, row, mainGrid);
+            addDiceImage(rolledDice, diceRoll, row, mainGrid);
+            addRerollCheckBox(rolledDice, row, mainGrid);
         }
-        addRollButton();
+        addRollButton(mainGrid);
     }
 
-    private void addDiceText(int row) {
-        Text firstText = new Text("Dice " + row);
-        firstText.setFont(new Font(12));
+    private void addWelcomeText(GridPane mainGrid) {
+        Text welcomeText = new Text("Welcome to Yahtzee!");
+        welcomeText.setFont(new Font(16));
 
-        diceGrid.add(firstText, 0, row);
+        mainGrid.add(welcomeText, 2, 1);
     }
 
-    private void addDiceDescription(Dice dice, int diceRoll, int row) {
+    private void addDiceText(int row, GridPane mainGrid) {
+        Text diceText = new Text("Dice " + (row-1));
+        diceText.setFont(new Font(16));
+
+        mainGrid.add(diceText, 0, row);
+    }
+
+    private void addDiceDescription(Dice dice, int diceRoll, int row, GridPane mainGrid) {
         Text diceDescription = new Text(Integer.toString(diceRoll));
-        diceDescription.setFont(new Font(12));
+        diceDescription.setFont(new Font(16));
 
         dice.setDiceDescription(diceDescription);
-        diceGrid.add(diceDescription, 1, row);
+        mainGrid.add(diceDescription, 1, row);
     }
 
-    private void addDiceImage(Dice dice, int diceRoll, int row) throws FileNotFoundException {
+    private void addDiceImage(Dice dice, int diceRoll, int row, GridPane mainGrid) throws FileNotFoundException {
         FileInputStream inputStream = new FileInputStream("dice" + diceRoll + ".png");
         Image diceImage = new Image(inputStream);
         ImageView diceImageView = new ImageView(diceImage);
@@ -96,28 +95,29 @@ public class DiceRollingSection {
         diceImageView.setPreserveRatio(true);
 
         dice.setDiceImageView(diceImageView);
-        diceGrid.add(diceImageView, 2, row);
+        mainGrid.add(diceImageView, 2, row);
     }
 
-    private void addRerollCheckBox(Dice dice, int row) {
+    private void addRerollCheckBox(Dice dice, int row, GridPane mainGrid) {
         CheckBox rerollCheckBox = new CheckBox("Reroll?");
+        rerollCheckBox.setFont(new Font(16));
         HBox hBox = new HBox(rerollCheckBox);
         hBox.setAlignment(Pos.CENTER);
 
         dice.setRerollCheckBox(rerollCheckBox);
-        diceGrid.add(hBox, 3, row);
+        mainGrid.add(hBox, 3, row);
     }
 
-    private void addRollButton() {
-        Button rollButton = new Button("Roll");
+    private void addRollButton(GridPane mainGrid) {
+        rollButton.setText("Roll");
         rollsRemaining.setText("Rolls Remaining: " + yahtzeeGame.getRollsRemaining());
-        rollsRemaining.setFont(new Font(12));
+        rollsRemaining.setFont(new Font(16));
 
         rollButton.setOnAction(
                 new EventHandler<javafx.event.ActionEvent>() {
                     @Override
                     public void handle(ActionEvent event) {
-                        roll();
+                        roll(false);
                         primaryStage.show();
                         if (yahtzeeGame.getRollsRemaining() == 0) {
                             rollButton.setDisable(true);
@@ -126,15 +126,15 @@ public class DiceRollingSection {
                 }
         );
 
-        diceGrid.add(rollButton, 1, 6);
-        diceGrid.add(rollsRemaining, 2, 6);
+        mainGrid.add(rollButton, 1, 7);
+        mainGrid.add(rollsRemaining, 2, 7);
     }
 
-    private void roll() {
+    private void roll(boolean newTurn) {
         boolean useUpRoll = false;
         for (int index = 0; index < dice.length; index++) {
             Dice rolledDice = dice[index];
-            if (rolledDice.getRerollState()) {
+            if (rolledDice.getRerollState() || newTurn) {
                 useUpRoll = true;
                 int diceRoll = yahtzeeGame.rollDice(index);
 
@@ -154,5 +154,23 @@ public class DiceRollingSection {
             yahtzeeGame.useRoll();
         }
         rollsRemaining.setText("Rolls Remaining: " + yahtzeeGame.getRollsRemaining());
+    }
+
+    public void resetRollsRemaining() {
+        if (yahtzeeGame.getTurnsRemaining() > 0) {
+            rollButton.setDisable(false);
+            roll(true);
+        }
+        else {
+            yahtzeeGame.endGame();
+            rollButton.setDisable(true);
+            rollsRemaining.setText("Rolls Remaining: " + yahtzeeGame.getRollsRemaining());
+        }
+    }
+
+    public void restart() {
+        rollButton.setDisable(false);
+        rollsRemaining.setText("Rolls Remaining: " + yahtzeeGame.getRollsRemaining());
+        roll(true);
     }
 }
