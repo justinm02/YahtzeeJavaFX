@@ -9,15 +9,20 @@ import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 
@@ -48,7 +53,7 @@ public class DiceRollingSection {
     private void initDiceUI(GridPane mainGrid) throws FileNotFoundException {
         yahtzeeGame.useRoll();
 
-        //addWelcomeText(mainGrid);
+        addRollingTitleText(mainGrid);
         for (int row = 2; row <= 6; row++) {
             addDiceText(row, mainGrid);
 
@@ -64,11 +69,12 @@ public class DiceRollingSection {
         addRollButton(mainGrid);
     }
 
-    private void addWelcomeText(GridPane mainGrid) {
-        Text welcomeText = new Text("Welcome to Yahtzee!");
-        welcomeText.setFont(new Font(16));
+    private void addRollingTitleText(GridPane mainGrid) {
+        Text rollingTitleText = new Text("Rolling Gameplay");
+        rollingTitleText.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        rollingTitleText.setUnderline(true);
 
-        mainGrid.add(welcomeText, 2, 1);
+        mainGrid.add(rollingTitleText, 2, 1);
     }
 
     private void addDiceText(int row, GridPane mainGrid) {
@@ -118,7 +124,6 @@ public class DiceRollingSection {
                     @Override
                     public void handle(ActionEvent event) {
                         roll(false);
-                        primaryStage.show();
                         if (yahtzeeGame.getRollsRemaining() == 0) {
                             rollButton.setDisable(true);
                         }

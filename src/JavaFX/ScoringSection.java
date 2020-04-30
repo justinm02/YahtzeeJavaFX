@@ -8,13 +8,17 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.control.Button;
+import javafx.scene.control.TextInputDialog;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
-import java.io.FileNotFoundException;
-import java.util.Arrays;
+import java.io.*;
+import java.util.*;
 
 public class ScoringSection {
     private Stage primaryStage;
@@ -40,16 +44,25 @@ public class ScoringSection {
         Text turnsRemaining = new Text("Turns Remaining: " + yahtzeeGame.getTurnsRemaining());
         turnsRemaining.setFont(new Font(16));
 
+        Text scoringCardTitle = new Text("Scoring Card");
+        scoringCardTitle.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        scoringCardTitle.setUnderline(true);
+
         mainGrid.add(turnsRemaining, 2, 8);
+        mainGrid.add(scoringCardTitle, 2, 11);
+
+        Text totalPointsScore = new Text();
 
         addRestartFunctionality(mainGrid, turnsRemaining);
 
-        addLowerScoring(scoringOptions, mainGrid, turnsRemaining);
+        addLowerScoring(scoringOptions, mainGrid, turnsRemaining, totalPointsScore);
 
-        addUpperScoring(scoringOptions, mainGrid, turnsRemaining);
+        addUpperScoring(scoringOptions, mainGrid, turnsRemaining, totalPointsScore);
+
+        addHighScores(mainGrid);
     }
 
-    public void addRestartFunctionality(GridPane mainGrid, Text turnsRemaining) {
+    private void addRestartFunctionality(GridPane mainGrid, Text turnsRemaining) {
         Button restartButton = new Button("Restart");
 
         restartButton.setOnAction(
@@ -62,8 +75,6 @@ public class ScoringSection {
                     diceRollingSection.restart();
 
                     turnsRemaining.setText("Turns Remaining: " + yahtzeeGame.getTurnsRemaining());
-
-                    primaryStage.show();
                 }
             }
         );
@@ -71,7 +82,7 @@ public class ScoringSection {
         mainGrid.add(restartButton, 1, 8);
     }
 
-    public void addLowerScoring(String[] scoringOptions, GridPane mainGrid, Text turnsRemaining) {
+    private void addLowerScoring(String[] scoringOptions, GridPane mainGrid, Text turnsRemaining, Text totalPointsScore) {
         Text bonusText = new Text("Bonus");
         Text lowerSumText = new Text("Lower Sum");
         Text bonusScore = new Text();
@@ -107,13 +118,14 @@ public class ScoringSection {
 
                             bonusScore.setText(Integer.toString(scoringCard.getBonus()));
                             lowerSumScore.setText(Integer.toString(scoringCard.getLowerSum()));
+                            totalPointsScore.setText(Integer.toString(scoringCard.getPointsTotal()));
 
                             yahtzeeGame.newTurn();
                             diceRollingSection.resetRollsRemaining();
 
                             turnsRemaining.setText("Turns Remaining: " + yahtzeeGame.getTurnsRemaining());
 
-                            primaryStage.show();
+                            updateHighScores(mainGrid);
                         }
                     }
             );
@@ -123,9 +135,8 @@ public class ScoringSection {
         }
     }
 
-    public void addUpperScoring(String[] scoringOptions, GridPane mainGrid, Text turnsRemaining) {
+    private void addUpperScoring(String[] scoringOptions, GridPane mainGrid, Text turnsRemaining, Text totalPointsScore) {
         Text totalPoints = new Text("Total Points");
-        Text totalPointsScore = new Text();
 
         totalPoints.setFont(new Font(16));
         totalPointsScore.setFont(new Font(16));
@@ -152,11 +163,12 @@ public class ScoringSection {
                             totalPointsScore.setText(Integer.toString(scoringCard.getPointsTotal()));
 
                             yahtzeeGame.newTurn();
-                            diceRollingSection.resetRollsRemaining();
 
                             turnsRemaining.setText("Turns Remaining: " + yahtzeeGame.getTurnsRemaining());
 
-                            primaryStage.show();
+                            diceRollingSection.resetRollsRemaining();
+
+                            updateHighScores(mainGrid);
                         }
                     }
             );
@@ -166,7 +178,45 @@ public class ScoringSection {
         }
     }
 
-    public void updateScore(Button scoringButton, String[] scoringOptions, int scoringIndex) {
+    private void addHighScores(GridPane mainGrid) {
+        Text highScoreTitle = new Text("High Scores");
+        highScoreTitle.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        highScoreTitle.setUnderline(true);
+
+        mainGrid.add(highScoreTitle, 10, 1);
+
+        try(BufferedReader bReader = new BufferedReader(new FileReader("highscores.txt"))) {
+            String playerLine = bReader.readLine();
+
+            int row = 2;
+            while (playerLine != null) {
+                Scanner playerScanner = new Scanner(playerLine);
+                String playerName = playerScanner.next();
+                Integer playerScore = playerScanner.nextInt();
+
+                Text playerPlace = new Text(row-1 + ")");
+                Text playerNameText = new Text(playerName);
+                Text playerScoreText = new Text(Integer.toString(playerScore));
+
+                playerPlace.setFont(new Font(16));
+                playerNameText.setFont(new Font(16));
+                playerScoreText.setFont(new Font(16));
+
+                mainGrid.add(playerPlace, 9, row);
+                mainGrid.add(playerNameText, 10, row);
+                mainGrid.add(playerScoreText, 11, row);
+
+                playerLine = bReader.readLine();
+                row++;
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void updateScore(Button scoringButton, String[] scoringOptions, int scoringIndex) {
         int[] rolls = yahtzeeGame.getRolls();
 
         if (scoringOptions[scoringIndex].equals("Ones")) {
@@ -240,8 +290,82 @@ public class ScoringSection {
 
     private void resetScoringButtons() {
         for (Button scoringButton : scoringButtons) {
-            System.out.println("scoringButton: " + scoringButton.getText());
             scoringButton.setDisable(false);
+            scoringButton.setText("0");
         }
+    }
+
+    private void updateHighScores(GridPane mainGrid) {
+        if (yahtzeeGame.getTurnsRemaining() == 0) {
+            String playerName = getPlayerName();
+
+            try (BufferedReader bReader = new BufferedReader(new FileReader("highscores.txt"))) {
+                Map<Integer, String> playerMap = new TreeMap<Integer, String>();
+                ArrayList<Integer> highScores = new ArrayList<Integer>();
+
+                String playerInfo = bReader.readLine();
+
+                while (playerInfo != null) {
+                    Scanner playerScanner = new Scanner(playerInfo);
+                    String name = playerScanner.next();
+                    Integer score = playerScanner.nextInt();
+                    highScores.add(score);
+                    playerMap.put(score, name);
+                    System.out.println(playerMap.toString() + " test");
+
+                    playerInfo = bReader.readLine();
+                }
+                playerMap.put(scoringCard.getPointsTotal(), playerName);
+                highScores.add(scoringCard.getPointsTotal());
+
+                Collections.sort(highScores, Collections.reverseOrder());
+                int[] newHighScores = new int[Math.min(highScores.size(), 5)];
+                String[] newHighScorePlayers = new String[Math.min(highScores.size(), 5)];
+
+                for (int i = 0; i < newHighScorePlayers.length; i++) {
+                    int highScore = highScores.get(i);
+
+                    newHighScores[i] = highScore;
+                    newHighScorePlayers[i] = playerMap.get(highScore);
+                }
+
+                FileWriter fileWriter = new FileWriter("highscores.txt");
+                fileWriter.write("");
+
+                fileWriter = new FileWriter("highscores.txt", true);
+                BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
+                PrintWriter highScoresWriter = new PrintWriter(bufferedWriter);
+
+                for (int i = 0; i < newHighScores.length; i++) {
+                    highScoresWriter.println(newHighScorePlayers[i] + " " + newHighScores[i]);
+                }
+                highScoresWriter.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            //addHighScores(mainGrid);
+        }
+    }
+
+    private String getPlayerName() {
+        TextInputDialog textInputDialog = new TextInputDialog();
+        textInputDialog.setHeaderText("Nice score! Enter your name below!");
+        textInputDialog.setTitle("Yahtzee Game Complete!");
+
+        try {
+            Image yahtzeeImage = new Image(new FileInputStream("yahtzeeGame.jpg"));
+            ImageView yahtzeeImageView = new ImageView(yahtzeeImage);
+            yahtzeeImageView.setFitHeight(100);
+            yahtzeeImageView.setFitWidth(100);
+            textInputDialog.setGraphic(yahtzeeImageView);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        textInputDialog.showAndWait();
+
+        return textInputDialog.getEditor().getText();
     }
 }
